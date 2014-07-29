@@ -182,6 +182,7 @@ Client.prototype.add = function (torrentId, opts, cb) {
 
   if (self.dht) {
     self.dht.lookup(torrent.infoHash, function (err) {
+      if (err) return
       self.dht.announce(torrent.infoHash, self.torrentPort, function () {
         torrent.emit('announce')
       })

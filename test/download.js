@@ -2,7 +2,6 @@ var auto = require('run-auto')
 var BitTorrentClient = require('../')
 var BlockStream = require('block-stream')
 var DHT = require('bittorrent-dht/client')
-var extend = require('extend.js')
 var fs = require('fs')
 var parseTorrent = require('parse-torrent')
 var portfinder = require('portfinder')
@@ -70,7 +69,7 @@ function downloadTrackerTest (t, serverType) {
         t.fail(err)
       })
 
-      tracker.on('start', function (addr) {
+      tracker.on('start', function () {
         trackerStartCount += 1
       })
 
@@ -79,7 +78,7 @@ function downloadTrackerTest (t, serverType) {
       })
     }],
 
-    client1: ['tracker', function (cb, r) {
+    client1: ['tracker', function (cb) {
       var client1 = new BitTorrentClient({ dht: false })
       client1.on('error', function (err) { t.fail(err) })
 
@@ -101,7 +100,7 @@ function downloadTrackerTest (t, serverType) {
       })
     }],
 
-    client2: ['client1', function (cb, r) {
+    client2: ['client1', function (cb) {
       var client2 = new BitTorrentClient({ dht: false })
       client2.on('error', function (err) { t.fail(err) })
 
