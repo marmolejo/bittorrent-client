@@ -125,22 +125,26 @@ Client.prototype.get = function (torrentId) {
 }
 
 /**
- * Add a new torrent to the client. `torrentId` can be a magnet uri (utf8 string),
- * torrent file (buffer), or info hash (hex string or buffer).
+ * Add a new torrent to the client. `torrentId` can be one of:
  *
- * @param {string|Buffer|Object} torrentId magnet uri, torrent file, info hash, or parsed torrent
- * @param {Object} opts optional torrent-specific options
- * @param {function=} cb called when the torrent is ready and has metadata
+ * - magnet uri (utf8 string)
+ * - torrent file (buffer)
+ * - info hash (hex string or buffer)
+ * - parsed torrent (from parse-torrent module)
+ *
+ * @param {string|Buffer|Object} torrentId torrent (choose from above list)
+ * @param {Object}               opts      optional torrent-specific options
+ * @param {function=}            ontorrent called when the torrent is ready (has metadata)
  */
-Client.prototype.add = function (torrentId, opts, cb) {
+Client.prototype.add = function (torrentId, opts, ontorrent) {
   var self = this
-  if (!self.ready) return self.once('ready', self.add.bind(self, torrentId, opts, cb))
+  if (!self.ready)
+    return self.once('ready', self.add.bind(self, torrentId, opts, ontorrent))
+
   if (typeof opts === 'function') {
-    cb = opts
+    ontorrent = opts
     opts = {}
   }
-  if (typeof cb !== 'function') cb = function () {}
-  cb = once(cb)
 
   var torrent = new Torrent(torrentId, extend({
     blocklist: self.blocklist,
@@ -150,14 +154,16 @@ Client.prototype.add = function (torrentId, opts, cb) {
     torrentPort: self.torrentPort,
     trackers: self.trackersEnabled
   }, opts))
+
   self.torrents.push(torrent)
 
-  torrent.swarm.on('download', function (downloaded) {
-    self.downloadSpeed(downloaded)
-  })
-  torrent.swarm.on('upload', function (uploaded) {
-    self.uploadSpeed(uploaded)
-  })
+  function clientOnTorrent (_torrent) {
+    if (torrent.infoHash === _torrent.infoHash) {
+      ontorrent(torrent)
+      self.removeListener('torrent', clientOnTorrent)
+    }
+  }
+  if (ontorrent) self.on('torrent', clientOnTorrent)
 
   process.nextTick(function () {
     self.emit('addTorrent', torrent)
@@ -170,14 +176,20 @@ Client.prototype.add = function (torrentId, opts, cb) {
   })
 
   torrent.on('error', function (err) {
-    cb(err)
     self.emit('error', err)
   })
 
   torrent.on('metadata', function () {
     // Call callback and emit 'torrent' when a torrent is ready to be used
-    cb(null, torrent)
     self.emit('torrent', torrent)
+  })
+
+  // TODO: proxy through, unecessary
+  torrent.swarm.on('download', function (downloaded) {
+    self.downloadSpeed(downloaded)
+  })
+  torrent.swarm.on('upload', function (uploaded) {
+    self.uploadSpeed(uploaded)
   })
 
   if (self.dht) {

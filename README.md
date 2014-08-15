@@ -124,7 +124,7 @@ If `opts` is specified, then the default options (shown below) will be overridde
 Emitted when a torrent is ready to be used (i.e. metadata is available). See the torrent
 section for more info on what methods a `torrent` has.
 
-#### `client.add(torrentId, [opts], [function callback (err, torrent) {}])`
+#### `client.add(torrentId, [opts], [function ontorrent (torrent) {}])`
 
 Add a new torrent to the client.
 
@@ -135,11 +135,13 @@ Add a new torrent to the client.
 - .torrent file (as a Buffer)
 - parsed torrent (from [parse-torrent](https://github.com/feross/parse-torrent))
 
-Optional `callback` is called when this torrent is ready to be used (i.e. metadata is
-available). Note: if you want access to the torrent object immediately in order to listen
-to events as the metadata is fetched from the network, then use the return value of
-`client.add`. If you just want the file data, then wait for the `callback` or 'torrent'
-event.
+If `ontorrent` is specified, then it will be called when **this** torrent is ready to be
+used (i.e. metadata is available). Note: this is distinct from the 'torrent' event which
+will fire for **all** torrents.
+
+If you want access to the torrent object immediately in order to listen to events as the
+metadata is fetched from the network, then use the return value of `client.add`. If you
+just want the file data, then use `ontorrent` or the 'torrent' event.
 
 #### `client.remove(torrentId, [function callback (err) {}])`
 
