@@ -7,7 +7,6 @@ var extend = require('extend.js')
 var hat = require('hat')
 var inherits = require('inherits')
 var magnet = require('magnet-uri')
-var once = require('once')
 var parallel = require('run-parallel')
 var parseTorrent = require('parse-torrent')
 var portfinder = require('portfinder')
@@ -42,11 +41,15 @@ function Client (opts) {
   self.dhtPort = opts.dhtPort
   self.torrentPort = opts.torrentPort
 
+  debug('new client peerId %s nodeId %s dhtPort %s torrentPort %s', self.peerId,
+      self.nodeId, self.dhtPort, self.torrentPort)
+
   self.trackersEnabled = opts.trackers
 
   self.ready = false
   self.torrents = []
   self.blocklist = opts.blocklist || []
+
   self.downloadSpeed = speedometer()
   self.uploadSpeed = speedometer()
 
@@ -81,10 +84,45 @@ function Client (opts) {
     if (err) return self.emit('error', err)
     self.ready = true
     self.emit('ready')
+    debug('ready')
   })
 }
 
 Client.Storage = Storage
+
+/**
+ * Given a torrentId, return a hex string.
+ * @param  {string|Buffer} torrentId magnet uri, torrent file, infohash, or parsed torrent
+ * @return {string} info hash (hex string)
+ */
+Client.toInfoHash = function (torrentId) {
+  if (typeof torrentId === 'string') {
+    if (!/^magnet:/.test(torrentId) && torrentId.length === 40 || torrentId.length === 32) {
+      // info hash (hex/base-32 string)
+      torrentId = 'magnet:?xt=urn:btih:' + torrentId
+    }
+    // magnet uri
+    var info = magnet(torrentId)
+    return info && info.infoHash
+  } else if (Buffer.isBuffer(torrentId)) {
+    if (torrentId.length === 20) {
+      // info hash (buffer)
+      return torrentId.toString('hex')
+    } else {
+      // torrent file
+      try {
+        return parseTorrent(torrentId).infoHash
+      } catch (err) {
+        return null
+      }
+    }
+  } else if (torrentId && torrentId.infoHash) {
+    // parsed torrent (from parse-torrent module)
+    return torrentId.infoHash
+  } else {
+    return null
+  }
+}
 
 /**
  * Aggregate seed ratio for all torrents in the client.
@@ -102,7 +140,7 @@ Object.defineProperty(Client.prototype, 'ratio', {
     }, 0)
 
     if (downloaded === 0) return 0
-    return uploaded / downloaded
+    else return uploaded / downloaded
   }
 })
 
@@ -146,6 +184,8 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
     opts = {}
   }
 
+  debug('add')
+
   var torrent = new Torrent(torrentId, extend({
     blocklist: self.blocklist,
     dht: !!self.dht,
@@ -156,6 +196,7 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
   }, opts))
 
   self.torrents.push(torrent)
+
 
   function clientOnTorrent (_torrent) {
     if (torrent.infoHash === _torrent.infoHash) {
@@ -169,10 +210,8 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
     self.emit('addTorrent', torrent)
   })
 
-  torrent.on('listening', function (port) {
-    debug('Swarm listening on port ' + port)
+  torrent.on('listening', function () {
     self.emit('listening', torrent)
-    // TODO: Add the torrent to the public DHT so peers know to find us
   })
 
   torrent.on('error', function (err) {
@@ -182,9 +221,9 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
   torrent.on('metadata', function () {
     // Call callback and emit 'torrent' when a torrent is ready to be used
     self.emit('torrent', torrent)
+    debug('torrent')
   })
 
-  // TODO: proxy through, unecessary
   torrent.swarm.on('download', function (downloaded) {
     self.downloadSpeed(downloaded)
   })
@@ -211,9 +250,8 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
 Client.prototype.remove = function (torrentId, cb) {
   var self = this
   var torrent = self.get(torrentId)
-  if (!torrent) {
-    throw new Error('No torrent with id ' + torrentId)
-  }
+  if (!torrent) throw new Error('No torrent with id ' + torrentId)
+  debug('remove')
   self.torrents.splice(self.torrents.indexOf(torrent), 1)
   torrent.destroy(cb)
 }
@@ -224,10 +262,8 @@ Client.prototype.remove = function (torrentId, cb) {
  */
 Client.prototype.destroy = function (cb) {
   var self = this
-
-  if (self.dht) {
-    self.dht.destroy()
-  }
+  debug('destroy')
+  if (self.dht) self.dht.destroy()
 
   var tasks = self.torrents.map(function (torrent) {
     return function (cb) {
@@ -238,46 +274,9 @@ Client.prototype.destroy = function (cb) {
   parallel(tasks, cb)
 }
 
+// TODO: move into bittorrent-swarm
 Client.prototype._onDHTPeer = function (addr, infoHash) {
   var self = this
   var torrent = self.get(infoHash)
   torrent.addPeer(addr)
-}
-
-//
-// HELPER METHODS
-//
-
-/**
- * Given a magnet uri, torrent file, info hash, or parsed torrent, return a hex string info hash
- * @param  {string|Buffer} torrentId magnet uri, torrent file, or infohash
- * @return {string} info hash (hex string)
- */
-Client.toInfoHash = function (torrentId) {
-  if (typeof torrentId === 'string') {
-    if (!/^magnet:/.test(torrentId) && torrentId.length === 40 || torrentId.length === 32) {
-      // info hash (hex/base-32 string)
-      torrentId = 'magnet:?xt=urn:btih:' + torrentId
-    }
-    // magnet uri
-    var info = magnet(torrentId)
-    return info && info.infoHash
-  } else if (Buffer.isBuffer(torrentId)) {
-    if (torrentId.length === 20) {
-      // info hash (buffer)
-      return torrentId.toString('hex')
-    } else {
-      // torrent file
-      try {
-        return parseTorrent(torrentId).infoHash
-      } catch (err) {
-        return null
-      }
-    }
-  } else if (torrentId && torrentId.infoHash) {
-    // parsed torrent (from parse-torrent module)
-    return torrentId.infoHash
-  } else {
-    return null
-  }
 }
