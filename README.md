@@ -4,6 +4,24 @@
 
 Simple, robust, torrent client that exposes files as streams so you can access file content before a torrent has finished downloading. This module is used by [WebTorrent](http://webtorrent.io) and heavily inspired by the excellent design of [torrent-stream](https://github.com/mafintosh/torrent-stream) by [@mafintosh](https://twitter.com/mafintosh).
 
+### features
+
+- **insanely fast**
+- **pure javascript** (no native dependencies)
+- exposes individual files as **streams** to access file content before torrent is finished
+  - sequentially requests pieces from peers (when necessary)
+  - otherwise, uses rarest-first piece strategy
+- download **multiple torrents** simultaneously, efficiently
+- supports advanced torrent client features
+  - **magnet uri** support via **[ut_metadata](https://github.com/feross/ut_metadata)**
+  - **peer discovery** via **[dht](https://github.com/feross/bittorrent-dht)**,
+    **[tracker](https://github.com/feross/bittorrent-tracker)**, and
+    **[ut_pex](https://github.com/fisch0920/ut_pex)**
+  - supports an awesome
+    **[extension api](https://github.com/feross/bittorrent-protocol#extension-api)** for
+    adding new extensions
+- **comprehensive test suite** (completely offline, so it's reliable and fast)
+
 ### install
 
 ```
