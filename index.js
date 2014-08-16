@@ -19,7 +19,7 @@ portfinder.basePort = Math.floor(Math.random() * 64000) + 1025 // pick port >102
 inherits(Client, EventEmitter)
 
 /**
- * Create a new `bittorrent-client` instance. Available options described in the README.
+ * Create a new `bittorrent-client` instance. Options described in README.
  * @param {Object} opts
  */
 function Client (opts) {
@@ -34,8 +34,13 @@ function Client (opts) {
   }, opts)
 
   // TODO: these ids should be consistent between restarts!
-  self.peerId = opts.peerId || new Buffer('-WW0001-' + hat(48), 'utf8')
-  self.nodeId = opts.nodeId || new Buffer(hat(160), 'hex')
+  self.peerId = Buffer.isBuffer(opts.peerId) ? opts.peerId
+    : typeof opts.peerId === 'string' ? new Buffer(opts.peerId, 'hex')
+    : new Buffer('-WW0001-' + hat(48), 'utf8')
+
+  self.nodeId = Buffer.isBuffer(opts.nodeId) ? opts.nodeId
+    : typeof opts.nodeId === 'string' ? new Buffer(opts.nodeId, 'hex')
+    : new Buffer(hat(160), 'hex')
 
   // TODO: DHT port should be consistent between restarts
   self.dhtPort = opts.dhtPort
