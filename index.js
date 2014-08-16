@@ -37,17 +37,19 @@ function Client (opts) {
   self.peerId = Buffer.isBuffer(opts.peerId) ? opts.peerId
     : typeof opts.peerId === 'string' ? new Buffer(opts.peerId, 'hex')
     : new Buffer('-WW0001-' + hat(48), 'utf8')
+  self.peerIdHex = self.peerId.toString('hex')
 
   self.nodeId = Buffer.isBuffer(opts.nodeId) ? opts.nodeId
     : typeof opts.nodeId === 'string' ? new Buffer(opts.nodeId, 'hex')
     : new Buffer(hat(160), 'hex')
+  self.nodeIdHex = self.nodeId.toString('hex')
 
   // TODO: DHT port should be consistent between restarts
   self.dhtPort = opts.dhtPort
   self.torrentPort = opts.torrentPort
 
-  debug('new client peerId %s nodeId %s dhtPort %s torrentPort %s', self.peerId,
-      self.nodeId, self.dhtPort, self.torrentPort)
+  debug('new client peerId %s nodeId %s dhtPort %s torrentPort %s', self.peerIdHex,
+      self.nodeIdHex, self.dhtPort, self.torrentPort)
 
   self.trackersEnabled = opts.trackers
 
@@ -189,7 +191,7 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
     opts = {}
   }
 
-  debug('add')
+  debug('add %s', torrentId)
 
   var torrent = new Torrent(torrentId, extend({
     blocklist: self.blocklist,
@@ -225,8 +227,8 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
 
   torrent.on('metadata', function () {
     // Call callback and emit 'torrent' when a torrent is ready to be used
-    self.emit('torrent', torrent)
     debug('torrent')
+    self.emit('torrent', torrent)
   })
 
   torrent.swarm.on('download', function (downloaded) {
