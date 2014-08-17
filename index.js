@@ -1,3 +1,6 @@
+// TODO: dhtPort and torrentPort should be consistent between restarts
+// TODO: peerId and nodeId should be consistent between restarts
+
 module.exports = Client
 
 var debug = require('debug')('bittorrent-client')
@@ -23,19 +26,17 @@ function Client (opts) {
   var self = this
   if (!(self instanceof Client)) return new Client(opts)
   EventEmitter.call(self)
+  if (!opts) opts = {}
 
   extend(self, {
     peerId: new Buffer('-WW0001-' + hat(48), 'utf8'),
     nodeId: new Buffer(hat(160), 'hex'),
     dht: true,
-    trackers: true,
-    // TODO: dhtPort and torrentPort should be consistent between restarts
-    dhtPort: undefined,
+    tracker: true,
     torrentPort: undefined,
     blocklist: undefined
   }, opts)
 
-  // TODO: peerId and nodeId should be consistent between restarts
   self.peerId = typeof self.peerId === 'string'
     ? new Buffer(self.peerId, 'utf8')
     : self.peerId
@@ -51,21 +52,11 @@ function Client (opts) {
   self.torrents = []
   self.downloadSpeed = speedometer()
   self.uploadSpeed = speedometer()
-  self.dhtReady = false
 
   // TODO: move DHT to bittorrent-swarm
   if (self.dht) {
     self.dht = new DHT(extend({ nodeId: self.nodeId }, self.dht))
-      .on('ready', function () {
-        self.dhtReady = true
-        debug('dht ready')
-      })
-      .on('listening', function (port) {
-        self.dhtPort = port
-      })
-      .on('peer', self._onDHTPeer.bind(self))
-
-    self.dht.listen(self.dhtPort)
+    self.dht.listen(opts.dhtPort)
   }
 }
 
@@ -188,19 +179,6 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
     self.emit('torrent', torrent)
   })
 
-  if (self.dht) {
-    var onDhtReady = function () {
-      self.dht.lookup(torrent.infoHash, function (err) {
-        if (err) return
-        self.dht.announce(torrent.infoHash, self.torrentPort, function () {
-          torrent.emit('announce')
-        })
-      })
-    }
-    if (self.dhtReady) onDhtReady()
-    else self.dht.on('ready', onDhtReady)
-  }
-
   return torrent
 }
 
@@ -235,11 +213,4 @@ Client.prototype.destroy = function (cb) {
   })
 
   parallel(tasks, cb)
-}
-
-// TODO: move into bittorrent-swarm
-Client.prototype._onDHTPeer = function (addr, infoHash) {
-  var self = this
-  var torrent = self.get(infoHash)
-  torrent.addPeer(addr)
 }

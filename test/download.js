@@ -155,6 +155,8 @@ test('Simple download using a tracker (only) via a magnet uri', function (t) {
 
       tracker.listen(function (port) {
         var announceUrl = 'udp://127.0.0.1:' + port
+        leavesParsed.announce = [ announceUrl ]
+        leavesParsed.announceList = [[ announceUrl ]]
         magnetUri = 'magnet:?xt=urn:btih:' + leavesParsed.infoHash + '&tr=' + encodeURIComponent(announceUrl)
         cb(null, tracker)
       })
@@ -164,7 +166,7 @@ test('Simple download using a tracker (only) via a magnet uri', function (t) {
       var client1 = new BitTorrentClient({ dht: false })
       client1.on('error', function (err) { t.fail(err) })
 
-      client1.add(magnetUri)
+      client1.add(leavesParsed)
 
       client1.on('torrent', function (torrent) {
         // torrent metadata has been fetched -- sanity check it
@@ -257,7 +259,7 @@ test('Simple download using DHT', function (t) {
         var names = [ 'Leaves of Grass by Walt Whitman.epub' ]
         t.deepEqual(torrent.files.map(function (file) { return file.name }), names)
 
-        torrent.on('announce', function () {
+        torrent.on('dhtAnnounce', function () {
           announced = true
           maybeDone(null)
         })
