@@ -5,7 +5,6 @@ var DHT = require('bittorrent-dht/client')
 var fs = require('fs')
 var parseTorrent = require('parse-torrent')
 var test = require('tape')
-var TrackerServer = require('bittorrent-tracker').Server
 
 var leavesFile = __dirname + '/torrents/Leaves of Grass by Walt Whitman.epub'
 var leavesTorrent = fs.readFileSync(__dirname + '/torrents/leaves.torrent')
