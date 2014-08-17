@@ -56,13 +56,15 @@ function Client (opts) {
   // TODO: move DHT to bittorrent-swarm
   if (self.dht) {
     self.dht = new DHT(extend({ nodeId: self.nodeId }, self.dht))
-    self.dht.on('peer', self._onDHTPeer.bind(self))
-    self.dht.on('listening', function (port) {
-      self.dhtPort = port
-    })
-    self.dht.on('ready', function () {
-      self.dhtReady = true
-    })
+      .on('ready', function () {
+        self.dhtReady = true
+        debug('dht ready')
+      })
+      .on('listening', function (port) {
+        self.dhtPort = port
+      })
+      .on('peer', self._onDHTPeer.bind(self))
+
     self.dht.listen(self.dhtPort)
   }
 }
@@ -181,23 +183,23 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
   })
 
   torrent.on('ready', function () {
-    debug('torrent')
     // Emit 'torrent' when a torrent is ready to be used
+    debug('torrent')
     self.emit('torrent', torrent)
-
-    if (self.dht) {
-      var onDhtReady = function () {
-        self.dht.lookup(torrent.infoHash, function (err) {
-          if (err) return
-          self.dht.announce(torrent.infoHash, self.torrentPort, function () {
-            torrent.emit('announce')
-          })
-        })
-      }
-      if (self.dhtReady) onDhtReady()
-      else self.dht.on('ready', onDhtReady)
-    }
   })
+
+  if (self.dht) {
+    var onDhtReady = function () {
+      self.dht.lookup(torrent.infoHash, function (err) {
+        if (err) return
+        self.dht.announce(torrent.infoHash, self.torrentPort, function () {
+          torrent.emit('announce')
+        })
+      })
+    }
+    if (self.dhtReady) onDhtReady()
+    else self.dht.on('ready', onDhtReady)
+  }
 
   return torrent
 }
