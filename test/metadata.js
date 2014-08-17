@@ -19,16 +19,16 @@ test('ut_metadata transfer', function (t) {
   // client1 starts with metadata from torrent file
   client1.add(leaves)
 
-  // client2 starts with infohash
-  client2.add(leavesTorrent.infoHash)
-
   client1.on('error', function (err) { t.fail(err) })
   client2.on('error', function (err) { t.fail(err) })
 
-  client1.on('listening', function (torrent1) {
+  client1.on('torrent', function (torrent1) {
     t.deepEqual(torrent1.parsedTorrent.info, leavesTorrent.info)
 
-    client2.on('listening', function (torrent2) {
+    // client2 starts with infohash
+    client2.add(leavesTorrent.infoHash)
+
+    client2.on('listening', function (port, torrent2) {
       // manually add the peer
       torrent2.addPeer('127.0.0.1:' + client1.torrentPort)
 

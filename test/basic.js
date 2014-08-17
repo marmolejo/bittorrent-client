@@ -17,36 +17,21 @@ test('Test supported torrentInfo types', function (t) {
 
   // info hash (as a hex string)
   var client1 = BitTorrentClient({ dht: false, trackers: false })
-    .add(leavesTorrent.infoHash)
-    .once('addTorrent', function (torrent) {
-      verify(client1, torrent)
-    })
+  verify(client1, client1.add(leavesTorrent.infoHash))
 
   // info hash (as a Buffer)
   var client2 = BitTorrentClient({ dht: false, trackers: false })
-    .add(new Buffer(leavesTorrent.infoHash, 'hex'))
-    .once('addTorrent', function (torrent) {
-      verify(client2, torrent)
-    })
+  verify(client2, client2.add(new Buffer(leavesTorrent.infoHash, 'hex')))
 
   // magnet uri (as a utf8 string)
   var client3 = BitTorrentClient({ dht: false, trackers: false })
-    .add('magnet:?xt=urn:btih:' + leavesTorrent.infoHash)
-    .once('addTorrent', function (torrent) {
-      verify(client3, torrent)
-    })
+  verify(client3, client3.add('magnet:?xt=urn:btih:' + leavesTorrent.infoHash))
 
   // .torrent file (as a Buffer)
   var client4 = BitTorrentClient({ dht: false, trackers: false })
-    .add(leaves)
-    .once('addTorrent', function (torrent) {
-      verify(client4, torrent)
-    })
+  verify(client4, client4.add(leaves))
 
   // parsed torrent (as an Object)
   var client5 = BitTorrentClient({ dht: false, trackers: false })
-    .add(leavesTorrent)
-    .once('addTorrent', function (torrent) {
-      verify(client5, torrent)
-    })
+  verify(client5, client5.add(leavesTorrent))
 })

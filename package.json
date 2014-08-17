@@ -23,7 +23,6 @@
     "ip": "^0.3.0",
     "magnet-uri": "^2.0.1",
     "parse-torrent": "^1.2.0",
-    "portfinder": "^0.2.1",
     "run-parallel": "^1.0.0",
     "speedometer": "^0.1.2",
     "ut_metadata": "^2.1.0",

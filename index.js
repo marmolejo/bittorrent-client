@@ -9,17 +9,14 @@ var inherits = require('inherits')
 var magnet = require('magnet-uri')
 var parallel = require('run-parallel')
 var parseTorrent = require('parse-torrent')
-var portfinder = require('portfinder')
 var speedometer = require('speedometer')
 var Storage = require('./lib/storage')
 var Torrent = require('./lib/torrent')
 
-portfinder.basePort = Math.floor(Math.random() * 64000) + 1025 // pick port >1024
-
 inherits(Client, EventEmitter)
 
 /**
- * Create a new `bittorrent-client` instance. Options described in README.
+ * Torrent client
  * @param {Object} opts
  */
 function Client (opts) {
@@ -27,55 +24,42 @@ function Client (opts) {
   if (!(self instanceof Client)) return new Client(opts)
   EventEmitter.call(self)
 
-  // default options
-  opts = extend({
+  extend(self, {
+    peerId: new Buffer('-WW0001-' + hat(48), 'utf8'),
+    nodeId: new Buffer(hat(160), 'hex'),
     dht: true,
-    trackers: true
+    trackers: true,
+    // TODO: dhtPort and torrentPort should be consistent between restarts
+    dhtPort: undefined,
+    torrentPort: undefined,
+    blocklist: undefined
   }, opts)
 
-  // TODO: these ids should be consistent between restarts!
-  self.peerId = Buffer.isBuffer(opts.peerId) ? opts.peerId
-    : typeof opts.peerId === 'string' ? new Buffer(opts.peerId, 'hex')
-    : new Buffer('-WW0001-' + hat(48), 'utf8')
+  // TODO: peerId and nodeId should be consistent between restarts
+  self.peerId = typeof self.peerId === 'string'
+    ? new Buffer(self.peerId, 'utf8')
+    : self.peerId
   self.peerIdHex = self.peerId.toString('hex')
 
-  self.nodeId = Buffer.isBuffer(opts.nodeId) ? opts.nodeId
-    : typeof opts.nodeId === 'string' ? new Buffer(opts.nodeId, 'hex')
-    : new Buffer(hat(160), 'hex')
+  self.nodeId = typeof self.nodeId === 'string'
+    ? new Buffer(self.nodeId, 'hex')
+    : self.nodeId
   self.nodeIdHex = self.nodeId.toString('hex')
 
-  // TODO: DHT port should be consistent between restarts
-  self.dhtPort = opts.dhtPort
-  self.torrentPort = opts.torrentPort
-
-  debug('new client peerId %s nodeId %s dhtPort %s torrentPort %s', self.peerIdHex,
-      self.nodeIdHex, self.dhtPort, self.torrentPort)
-
-  self.trackersEnabled = opts.trackers
+  debug('new client peerId %s nodeId %s', self.peerIdHex, self.nodeIdHex)
 
   self.ready = false
   self.torrents = []
-  self.blocklist = opts.blocklist || []
 
   self.downloadSpeed = speedometer()
   self.uploadSpeed = speedometer()
 
   var tasks = []
 
-  if (!self.torrentPort) {
-    // TODO: move portfinder stuff into bittorrent-swarm, like how
-    // it works with bittorrent-dht
+  // TODO: move DHT to bittorrent-swarm
+  if (self.dht) {
     tasks.push(function (cb) {
-      portfinder.getPort(function (err, port) {
-        self.torrentPort = port
-        cb(err)
-      })
-    })
-  }
-
-  if (opts.dht) {
-    tasks.push(function (cb) {
-      self.dht = new DHT(extend({ nodeId: self.nodeId }, opts.dht))
+      self.dht = new DHT(extend({ nodeId: self.nodeId }, self.dht))
       self.dht.on('peer', self._onDHTPeer.bind(self))
       self.dht.on('listening', function (port) {
         self.dhtPort = port
@@ -89,9 +73,11 @@ function Client (opts) {
 
   parallel(tasks, function (err) {
     if (err) return self.emit('error', err)
-    self.ready = true
-    self.emit('ready')
-    debug('ready')
+    process.nextTick(function () {
+      self.ready = true
+      debug('ready')
+      self.emit('ready')
+    })
   })
 }
 
@@ -183,27 +169,11 @@ Client.prototype.get = function (torrentId) {
  */
 Client.prototype.add = function (torrentId, opts, ontorrent) {
   var self = this
-  if (!self.ready)
-    return self.once('ready', self.add.bind(self, torrentId, opts, ontorrent))
-
+  debug('add %s', torrentId)
   if (typeof opts === 'function') {
     ontorrent = opts
     opts = {}
   }
-
-  debug('add %s', torrentId)
-
-  var torrent = new Torrent(torrentId, extend({
-    blocklist: self.blocklist,
-    dht: !!self.dht,
-    dhtPort: self.dhtPort,
-    peerId: self.peerId,
-    torrentPort: self.torrentPort,
-    trackers: self.trackersEnabled
-  }, opts))
-
-  self.torrents.push(torrent)
-
 
   function clientOnTorrent (_torrent) {
     if (torrent.infoHash === _torrent.infoHash) {
@@ -213,39 +183,34 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
   }
   if (ontorrent) self.on('torrent', clientOnTorrent)
 
-  process.nextTick(function () {
-    self.emit('addTorrent', torrent)
-  })
-
-  torrent.on('listening', function () {
-    self.emit('listening', torrent)
-  })
+  var torrent = new Torrent(torrentId, extend({ client: self }, opts))
+  self.torrents.push(torrent)
 
   torrent.on('error', function (err) {
     self.emit('error', err)
   })
 
-  torrent.on('metadata', function () {
-    // Call callback and emit 'torrent' when a torrent is ready to be used
+  torrent.on('listening', function (port) {
+    self.emit('listening', port, torrent)
+  })
+
+  torrent.on('ready', function () {
     debug('torrent')
+    // Emit 'torrent' when a torrent is ready to be used
     self.emit('torrent', torrent)
-  })
 
-  torrent.swarm.on('download', function (downloaded) {
-    self.downloadSpeed(downloaded)
-  })
-  torrent.swarm.on('upload', function (uploaded) {
-    self.uploadSpeed(uploaded)
-  })
-
-  if (self.dht) {
-    self.dht.lookup(torrent.infoHash, function (err) {
-      if (err) return
-      self.dht.announce(torrent.infoHash, self.torrentPort, function () {
-        torrent.emit('announce')
+    if (self.dht) {
+      self.dht.lookup(torrent.infoHash, function (err) {
+        if (err) return
+        // TODO: what if torrentPort isn't set yet?
+        self.dht.announce(torrent.infoHash, self.torrentPort, function () {
+          torrent.emit('announce')
+        })
       })
-    })
-  }
+    }
+  })
+
+  return torrent
 }
 
 /**

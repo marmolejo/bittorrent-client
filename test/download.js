@@ -4,11 +4,8 @@ var BlockStream = require('block-stream')
 var DHT = require('bittorrent-dht/client')
 var fs = require('fs')
 var parseTorrent = require('parse-torrent')
-var portfinder = require('portfinder')
 var test = require('tape')
 var TrackerServer = require('bittorrent-tracker').Server
-
-// TODO: add a download test for DHT
 
 var leavesFile = __dirname + '/torrents/Leaves of Grass by Walt Whitman.epub'
 var leavesTorrent = fs.readFileSync(__dirname + '/torrents/leaves.torrent')
@@ -48,22 +45,10 @@ function downloadTrackerTest (t, serverType) {
   var trackerStartCount = 0
 
   auto({
-    trackerPort: function (cb) {
-      portfinder.getPort(cb)
-    },
-
-    tracker: ['trackerPort', function (cb, r) {
+    tracker: function (cb) {
       var tracker = new TrackerServer(
         serverType === 'udp' ? { http: false } : { udp: false }
       )
-
-      var announceUrl = serverType === 'http'
-        ? 'http://127.0.0.1:' + r.trackerPort + '/announce'
-        : 'udp://127.0.0.1:' + r.trackerPort
-
-      // Overwrite announce with our local tracker
-      leavesParsed.announce = [ announceUrl ]
-      leavesParsed.announceList = [[ announceUrl ]]
 
       tracker.on('error', function (err) {
         t.fail(err)
@@ -73,10 +58,18 @@ function downloadTrackerTest (t, serverType) {
         trackerStartCount += 1
       })
 
-      tracker.listen(r.trackerPort, function () {
+      tracker.listen(function (port) {
+        var announceUrl = serverType === 'http'
+          ? 'http://127.0.0.1:' + port + '/announce'
+          : 'udp://127.0.0.1:' + port
+
+        // Overwrite announce with our local tracker
+        leavesParsed.announce = [ announceUrl ]
+        leavesParsed.announceList = [[ announceUrl ]]
+
         cb(null, tracker)
       })
-    }],
+    },
 
     client1: ['tracker', function (cb) {
       var client1 = new BitTorrentClient({ dht: false })

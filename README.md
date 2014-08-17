@@ -121,8 +121,8 @@ If `opts` is specified, then the default options (shown below) will be overridde
 
 #### `client.on('torrent', function (torrent) {})`
 
-Emitted when a torrent is ready to be used (i.e. metadata is available). See the torrent
-section for more info on what methods a `torrent` has.
+Emitted when a torrent is ready to be used (i.e. metadata is available and storage is
+ready). See the torrent section for more info on what methods a `torrent` has.
 
 #### `client.add(torrentId, [opts], [function ontorrent (torrent) {}])`
 
