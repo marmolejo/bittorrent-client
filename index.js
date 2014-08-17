@@ -48,37 +48,23 @@ function Client (opts) {
 
   debug('new client peerId %s nodeId %s', self.peerIdHex, self.nodeIdHex)
 
-  self.ready = false
   self.torrents = []
-
   self.downloadSpeed = speedometer()
   self.uploadSpeed = speedometer()
-
-  var tasks = []
+  self.dhtReady = false
 
   // TODO: move DHT to bittorrent-swarm
   if (self.dht) {
-    tasks.push(function (cb) {
-      self.dht = new DHT(extend({ nodeId: self.nodeId }, self.dht))
-      self.dht.on('peer', self._onDHTPeer.bind(self))
-      self.dht.on('listening', function (port) {
-        self.dhtPort = port
-      })
-      self.dht.on('ready', function () {
-        cb()
-      })
-      self.dht.listen(self.dhtPort)
+    self.dht = new DHT(extend({ nodeId: self.nodeId }, self.dht))
+    self.dht.on('peer', self._onDHTPeer.bind(self))
+    self.dht.on('listening', function (port) {
+      self.dhtPort = port
     })
+    self.dht.on('ready', function () {
+      self.dhtReady = true
+    })
+    self.dht.listen(self.dhtPort)
   }
-
-  parallel(tasks, function (err) {
-    if (err) return self.emit('error', err)
-    process.nextTick(function () {
-      self.ready = true
-      debug('ready')
-      self.emit('ready')
-    })
-  })
 }
 
 Client.Storage = Storage
@@ -200,13 +186,16 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
     self.emit('torrent', torrent)
 
     if (self.dht) {
-      self.dht.lookup(torrent.infoHash, function (err) {
-        if (err) return
-        // TODO: what if torrentPort isn't set yet?
-        self.dht.announce(torrent.infoHash, self.torrentPort, function () {
-          torrent.emit('announce')
+      var onDhtReady = function () {
+        self.dht.lookup(torrent.infoHash, function (err) {
+          if (err) return
+          self.dht.announce(torrent.infoHash, self.torrentPort, function () {
+            torrent.emit('announce')
+          })
         })
-      })
+      }
+      if (self.dhtReady) onDhtReady()
+      else self.dht.on('ready', onDhtReady)
     }
   })
 
