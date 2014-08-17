@@ -21,6 +21,7 @@
     "hat": "0.0.3",
     "inherits": "^2.0.1",
     "ip": "^0.3.0",
+    "ip-set": "^1.0.0",
     "magnet-uri": "^2.0.1",
     "parse-torrent": "^1.2.0",
     "re-emitter": "^1.0.0",

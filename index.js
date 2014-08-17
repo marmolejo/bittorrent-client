@@ -9,6 +9,7 @@ var EventEmitter = require('events').EventEmitter
 var extend = require('extend.js')
 var hat = require('hat')
 var inherits = require('inherits')
+var ipSet = require('ip-set')
 var magnet = require('magnet-uri')
 var parallel = require('run-parallel')
 var parseTorrent = require('parse-torrent')
@@ -33,8 +34,7 @@ function Client (opts) {
     nodeId: new Buffer(hat(160), 'hex'),
     dht: true,
     tracker: true,
-    torrentPort: undefined,
-    blocklist: undefined
+    torrentPort: undefined
   }, opts)
 
   self.peerId = typeof self.peerId === 'string'
@@ -49,11 +49,12 @@ function Client (opts) {
 
   debug('new client peerId %s nodeId %s', self.peerIdHex, self.nodeIdHex)
 
+  self.blocked = ipSet(opts.blocklist)
   self.torrents = []
   self.downloadSpeed = speedometer()
   self.uploadSpeed = speedometer()
 
-  // TODO: move DHT to bittorrent-swarm
+  // TODO: move DHT to bittorrent-swarm?
   if (self.dht) {
     self.dht = new DHT(extend({ nodeId: self.nodeId }, self.dht))
     self.dht.listen(opts.dhtPort)
