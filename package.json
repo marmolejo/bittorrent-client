@@ -17,6 +17,7 @@
     "bittorrent-swarm": "0.x",
     "bittorrent-tracker": "^2.0.0",
     "debug": "^1.0.0",
+    "dezalgo": "^1.0.0",
     "end-of-stream": "^1.0.0",
     "extend.js": "^0.0.1",
     "hat": "0.0.3",
