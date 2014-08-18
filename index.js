@@ -130,7 +130,7 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
   self.torrents.push(torrent)
 
   torrent.on('error', function (err) {
-    self.emit('error', err)
+    self.emit('error', err, torrent)
   })
 
   torrent.on('listening', function (port) {
