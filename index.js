@@ -53,7 +53,6 @@ function Client (opts) {
   self.downloadSpeed = speedometer()
   self.uploadSpeed = speedometer()
 
-  // TODO: move DHT to bittorrent-swarm?
   if (self.dht) {
     self.dht = new DHT(extend({ nodeId: self.nodeId }, self.dht))
     self.dht.listen(opts.dhtPort)
