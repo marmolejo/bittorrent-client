@@ -10,7 +10,6 @@ var extend = require('extend.js')
 var hat = require('hat')
 var inherits = require('inherits')
 var ipSet = require('ip-set')
-var magnet = require('magnet-uri')
 var parallel = require('run-parallel')
 var parseTorrent = require('parse-torrent')
 var speedometer = require('speedometer')
@@ -64,40 +63,6 @@ function Client (opts) {
 Client.Storage = Storage
 
 /**
- * Given a torrentId, return a hex string.
- * @param  {string|Buffer} torrentId magnet uri, torrent file, infohash, or parsed torrent
- * @return {string} info hash (hex string)
- */
-Client.toInfoHash = function (torrentId) {
-  if (typeof torrentId === 'string') {
-    if (!/^magnet:/.test(torrentId) && torrentId.length === 40 || torrentId.length === 32) {
-      // info hash (hex/base-32 string)
-      torrentId = 'magnet:?xt=urn:btih:' + torrentId
-    }
-    // magnet uri
-    var info = magnet(torrentId)
-    return info && info.infoHash
-  } else if (Buffer.isBuffer(torrentId)) {
-    if (torrentId.length === 20) {
-      // info hash (buffer)
-      return torrentId.toString('hex')
-    } else {
-      // torrent file
-      try {
-        return parseTorrent(torrentId).infoHash
-      } catch (err) {
-        return null
-      }
-    }
-  } else if (torrentId && torrentId.infoHash) {
-    // parsed torrent (from parse-torrent module)
-    return torrentId.infoHash
-  } else {
-    return null
-  }
-}
-
-/**
  * Aggregate seed ratio for all torrents in the client.
  * @type {number}
  */
@@ -125,12 +90,11 @@ Object.defineProperty(Client.prototype, 'ratio', {
  */
 Client.prototype.get = function (torrentId) {
   var self = this
-  var infoHash = Client.toInfoHash(torrentId)
+  var parsed = parseTorrent(torrentId)
+  if (!parsed || !parsed.infoHash) return null
   for (var i = 0, len = self.torrents.length; i < len; i++) {
     var torrent = self.torrents[i]
-    if (torrent.infoHash === infoHash) {
-      return torrent
-    }
+    if (torrent.infoHash === parsed.infoHash) return torrent
   }
   return null
 }
@@ -205,12 +169,15 @@ Client.prototype.remove = function (torrentId, cb) {
 Client.prototype.destroy = function (cb) {
   var self = this
   debug('destroy')
-  if (self.dht) self.dht.destroy()
 
   var tasks = self.torrents.map(function (torrent) {
     return function (cb) {
       self.remove(torrent.infoHash, cb)
     }
+  })
+
+  if (self.dht) tasks.push(function (cb) {
+    self.dht.destroy(cb)
   })
 
   parallel(tasks, cb)
