@@ -1,6 +1,8 @@
 # bittorrent-client [![build](https://img.shields.io/travis/feross/bittorrent-client.svg)](https://travis-ci.org/feross/bittorrent-client) [![npm](https://img.shields.io/npm/v/bittorrent-client.svg)](https://npmjs.org/package/bittorrent-client) [![gittip](https://img.shields.io/gittip/feross.svg)](https://www.gittip.com/feross/)
 
-### Fast, streaming torrent client
+### Fast, streaming torrent client (for node and the browser)
+
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/webtorrent-client.svg)](https://saucelabs.com/u/webtorrent-client)
 
 Simple, robust, torrent client that exposes files as streams so you can access file content before a torrent has finished downloading. This module is used by [WebTorrent](http://webtorrent.io) and heavily inspired by the excellent design of [torrent-stream](https://github.com/mafintosh/torrent-stream) by [@mafintosh](https://twitter.com/mafintosh).
 
