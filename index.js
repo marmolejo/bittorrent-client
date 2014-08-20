@@ -4,7 +4,7 @@
 module.exports = Client
 
 var debug = require('debug')('bittorrent-client')
-var DHT = require('bittorrent-dht/client')
+var DHT = require('bittorrent-dht/client') // empty object in browser
 var EventEmitter = require('events').EventEmitter
 var extend = require('extend.js')
 var hat = require('hat')
@@ -31,7 +31,7 @@ function Client (opts) {
   extend(self, {
     peerId: new Buffer('-WW0001-' + hat(48), 'utf8'),
     nodeId: new Buffer(hat(160), 'hex'),
-    dht: true,
+    dht: (typeof DHT === 'function'), // will be false in browser until webtorrent-dht is implemented
     tracker: true,
     torrentPort: undefined
   }, opts)

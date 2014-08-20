@@ -7,13 +7,18 @@
     "email": "feross@feross.org",
     "url": "http://feross.org/"
   },
+  "browser": {
+    "bittorrent-dht/client": false,
+    "bittorrent-swarm": "webtorrent-swarm",
+    "ut_metadata": false,
+    "ut_pex": false
+  },
   "bugs": {
     "url": "https://github.com/feross/bittorrent-client/issues"
   },
   "dependencies": {
     "bitfield": "^1.0.2",
     "bittorrent-dht": "^2.0.0",
-    "bittorrent-discovery": "^1.0.0",
     "bittorrent-swarm": "0.x",
     "debug": "^1.0.0",
     "dezalgo": "^1.0.0",
@@ -26,8 +31,10 @@
     "re-emitter": "^1.0.0",
     "run-parallel": "^1.0.0",
     "speedometer": "^0.1.2",
+    "torrent-discovery": "^2.0.1",
     "ut_metadata": "^2.1.0",
-    "ut_pex": "^1.0.0"
+    "ut_pex": "^1.0.0",
+    "webtorrent-swarm": "^0.1.2"
   },
   "devDependencies": {
     "bittorrent-tracker": "^2.5.0",
