@@ -42,7 +42,7 @@ urls, the client automatically connects to trackers to discover new peers.
 ```js
 var BitTorrentClient = require('bittorrent-client')
 
-var client = BitTorrentClient()
+var client = new BitTorrentClient()
 
 // "Pride and Prejudice" by Jane Austen
 client.add('magnet:?xt=urn:btih:1e69917fbaa2c767bca463a96b5572785c6d8a12')
@@ -103,7 +103,7 @@ client.add(url)
 
 ### client api
 
-#### `client = BitTorrentClient([opts])`
+#### `client = new BitTorrentClient([opts])`
 
 Create a new `bittorrent-client` instance.
 
@@ -112,7 +112,6 @@ If `opts` is specified, then the default options (shown below) will be overridde
 ``` js
 {
   maxPeers: 100,          // Max number of peers to connect to (per torrent)
-  path: '/tmp/some-name', // Where to save the torrent file data
   peerId: '',             // Wire protocol peer ID (otherwise, randomly generated)
   nodeId: '',             // DHT protocol node ID (otherwise, randomly generated)
   tracker: true,          // Whether or not to enable trackers
