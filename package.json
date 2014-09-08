@@ -10,7 +10,6 @@
   "browser": {
     "bittorrent-dht/client": false,
     "bittorrent-swarm": "webtorrent-swarm",
-    "ut_metadata": false,
     "ut_pex": false
   },
   "bugs": {
