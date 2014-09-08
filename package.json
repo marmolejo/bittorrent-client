@@ -20,6 +20,8 @@
     "bitfield": "^1.0.2",
     "bittorrent-dht": "^2.0.0",
     "bittorrent-swarm": "0.x",
+    "block-stream": "0.0.7",
+    "create-torrent": "^2.5.0",
     "debug": "^1.0.0",
     "dezalgo": "^1.0.0",
     "end-of-stream": "^1.0.0",
@@ -38,7 +40,6 @@
   },
   "devDependencies": {
     "bittorrent-tracker": "^2.5.0",
-    "block-stream": "0.0.7",
     "brfs": "^1.2.0",
     "run-auto": "^1.0.0",
     "tape": "^2.13.1",

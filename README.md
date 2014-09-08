@@ -120,14 +120,9 @@ If `opts` is specified, then the default options (shown below) will be overridde
 }
 ```
 
-#### `client.on('torrent', function (torrent) {})`
-
-Emitted when a torrent is ready to be used (i.e. metadata is available and storage is
-ready). See the torrent section for more info on what methods a `torrent` has.
-
 #### `client.add(torrentId, [opts], [function ontorrent (torrent) {}])`
 
-Add a new torrent to the client.
+Start downloading a torrent. Aliased as `client.download`.
 
 `torrentId` can be any of the following:
 
@@ -143,6 +138,29 @@ will fire for **all** torrents.
 If you want access to the torrent object immediately in order to listen to events as the
 metadata is fetched from the network, then use the return value of `client.add`. If you
 just want the file data, then use `ontorrent` or the 'torrent' event.
+
+#### `client.seed(input, [opts], [function onseed (torrent) {}])
+
+Start seeding a new torrent.
+
+`input` can be any of the following:
+
+- path to the file or folder on filesystem (string)
+- W3C [File](https://developer.mozilla.org/en-US/docs/Web/API/File) object (from an `<input>` or drag and drop)
+- W3C [FileList](https://developer.mozilla.org/en-US/docs/Web/API/FileList) object (basically an array of `File` objects)
+- Array of `File` objects
+
+If `opts` is specified, it should contain the following types of options:
+
+- options for [create-torrent](https://github.com/feross/create-torrent#createtorrentinput-opts-function-callback-err-torrent-) (to allow configuration of the .torrent file that is created)
+- options for `client.add` (see above)
+
+If `onseed` is specified, it will be called when the client has begun seeding the file.
+
+#### `client.on('torrent', function (torrent) {})`
+
+Emitted when a torrent is ready to be used (i.e. metadata is available and storage is
+ready). See the torrent section for more info on what methods a `torrent` has.
 
 #### `client.remove(torrentId, [function callback (err) {}])`
 

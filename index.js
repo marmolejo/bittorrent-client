@@ -3,6 +3,7 @@
 
 module.exports = Client
 
+var createTorrent = require('create-torrent')
 var debug = require('debug')('bittorrent-client')
 var DHT = require('bittorrent-dht/client') // empty object in browser
 var EventEmitter = require('events').EventEmitter
@@ -110,13 +111,17 @@ Client.prototype.get = function (torrentId) {
  * @param {Object}               opts      optional torrent-specific options
  * @param {function=}            ontorrent called when the torrent is ready (has metadata)
  */
-Client.prototype.add = function (torrentId, opts, ontorrent) {
+Client.prototype.add =
+Client.prototype.download = function (torrentId, opts, ontorrent) {
   var self = this
   debug('add %s', torrentId)
   if (typeof opts === 'function') {
     ontorrent = opts
     opts = {}
   }
+
+  var torrent = new Torrent(torrentId, extend({ client: self }, opts))
+  self.torrents.push(torrent)
 
   function clientOnTorrent (_torrent) {
     if (torrent.infoHash === _torrent.infoHash) {
@@ -125,9 +130,6 @@ Client.prototype.add = function (torrentId, opts, ontorrent) {
     }
   }
   if (ontorrent) self.on('torrent', clientOnTorrent)
-
-  var torrent = new Torrent(torrentId, extend({ client: self }, opts))
-  self.torrents.push(torrent)
 
   torrent.on('error', function (err) {
     self.emit('error', err, torrent)
@@ -159,6 +161,45 @@ Client.prototype.remove = function (torrentId, cb) {
   debug('remove')
   self.torrents.splice(self.torrents.indexOf(torrent), 1)
   torrent.destroy(cb)
+}
+
+/**
+ * Start seeding given torrent.
+ * @param  {string|File|FileList|Array.<File>|Blob|Array.<Blob>} input
+ * @param  {Object} opts
+ * @param  {function} onseed
+ */
+Client.prototype.seed = function (input, opts, onseed) {
+  var self = this
+  if (typeof opts === 'function') {
+    onseed = opts
+    opts = {}
+  }
+
+  var torrent
+  function clientOnSeed (_torrent) {
+    if (torrent.infoHash === _torrent.infoHash) {
+      onseed(torrent)
+      self.removeListener('seed', clientOnSeed)
+    }
+  }
+  if (onseed) self.on('seed', clientOnSeed)
+
+  createTorrent(input, opts, function (err, torrentBuf) {
+    if (err) return self.emit('error', err)
+    var parsedTorrent = parseTorrent(torrentBuf)
+    self.add(torrentBuf, opts, function (_torrent) {
+      torrent = _torrent
+      Storage.writeToStorage(
+        torrent.storage,
+        input[0].buffer,
+        parsedTorrent.pieceLength,
+        function (err) {
+          if (err) return self.emit('error', err)
+          self.emit('seed', torrent)
+        })
+    })
+  })
 }
 
 /**
