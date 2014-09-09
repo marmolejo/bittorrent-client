@@ -175,6 +175,10 @@ Client.prototype.seed = function (input, opts, onseed) {
     onseed = opts
     opts = {}
   }
+  // TODO: support `input` as filesystem path string
+  var buffer = Buffer.concat(input.map(function (file) {
+    return file.buffer
+  }))
 
   var torrent
   function clientOnSeed (_torrent) {
@@ -192,7 +196,7 @@ Client.prototype.seed = function (input, opts, onseed) {
       torrent = _torrent
       Storage.writeToStorage(
         torrent.storage,
-        input[0].buffer,
+        buffer,
         parsedTorrent.pieceLength,
         function (err) {
           if (err) return self.emit('error', err)
