@@ -139,7 +139,7 @@ If you want access to the torrent object immediately in order to listen to event
 metadata is fetched from the network, then use the return value of `client.add`. If you
 just want the file data, then use `ontorrent` or the 'torrent' event.
 
-#### `client.seed(input, [opts], [function onseed (torrent) {}])
+#### `client.seed(input, [opts], [function onseed (torrent) {}])`
 
 Start seeding a new torrent.
 
